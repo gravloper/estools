@@ -36,7 +36,7 @@ function Console.new(name: string)
 
 	self._root = new("Frame")
 	self._root.Name = "Root"
-	self._root.Size = udim2(0, 260, 0, 210)
+	self._root.Size = udim2(0, 260, 0, 190)
 	self._root.Position = udim2(0, 30, 0, 120)
 	self._root.BackgroundColor3 = color3(10, 10, 10)
 	self._root.BackgroundTransparency = 0.35
@@ -179,7 +179,7 @@ local function exec(url: string)
 	fn()
 end
 
-local hub = Console.new("DevHubClassic")
+local hub = Console.new("dvhub")
 
 hub:Section("Tools"):Rows({
 	{
@@ -208,9 +208,8 @@ hub:Section("Tools"):Rows({
 	},
 })
 
-hub:Section("Status"):InfoRows({
-	Status = "Ready",
-	Loaded = os.date("%X"),
+hub:Section("Version"):InfoRows({
+	Build = "v0.0.5 beta",
 })
 
 do
