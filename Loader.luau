@@ -1,7 +1,7 @@
 local base = "https://raw.githubusercontent.com/gravloper/estools/refs/heads/main/Games/"
 
 local supported = {
-	-- nothing here js get used to dvhub fr now
+	-- no support right now, im more focused on dvhub
 }
 
 local plr = game:GetService("Players").LocalPlayer
