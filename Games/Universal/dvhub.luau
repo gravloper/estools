@@ -1,239 +1,181 @@
---!strict
+local base = "https://raw.githubusercontent.com/gravloper/estools/refs/heads/main/Games/"
 
-local Players = game:GetService("Players")
-local CoreGui : Instance = game:GetService("CoreGui")
-local LP = Players.LocalPlayer
-
-local new = Instance.new
-local udim2 = UDim2.new
-local color3 = Color3.fromRGB
-local fmt = string.format
-local insert = table.insert
-
-type RowDef = {
-	Label : string,
-	OnFire : (() -> ())?,
+local supported = {
+	-- [placeid] = "Supported/whatever.luau"
 }
 
-local function resolveRoot() : Instance
-	local ok, root = pcall(function() return CoreGui end)
-	if ok and root then return root end
-	return LP:WaitForChild("PlayerGui")
+local plr = game:GetService("Players").LocalPlayer
+local CoreGui = game:GetService("CoreGui")
+local Http = game:GetService("HttpService")
+
+local parent
+local ok, res = pcall(function() return CoreGui end)
+if ok and res then
+	parent = res
+else
+	parent = plr:WaitForChild("PlayerGui")
 end
 
-local Console = {}
-Console.__index = Console
-
-function Console.new(name: string)
-	local self = setmetatable({}, Console)
-
-	self._gui = new("ScreenGui")
-	self._gui.Name = name
-	self._gui.ResetOnSpawn = false
-	self._gui.IgnoreGuiInset = true
-	self._gui.DisplayOrder = 999
-	self._gui.Parent = resolveRoot()
-
-	self._root = new("Frame")
-	self._root.Name = "Root"
-	self._root.Size = udim2(0, 260, 0, 190)
-	self._root.Position = udim2(0, 30, 0, 120)
-	self._root.BackgroundColor3 = color3(10, 10, 10)
-	self._root.BackgroundTransparency = 0.35
-	self._root.BorderSizePixel = 0
-	self._root.Active = true
-	self._root.Draggable = true
-	self._root.Parent = self._gui
-
-	local stroke = new("UIStroke")
-	stroke.Color = color3(255, 255, 255)
-	stroke.Transparency = 0.85
-	stroke.Thickness = 1
-	stroke.Parent = self._root
-
-	self._cursor = 0
-	self._conns = {}
-
-	return self
-end
-
-function Console:_advance(px: number)
-	self._cursor += px
-	return self._cursor - px
-end
-
-function Console:Section(label: string)
-	local y = self:_advance(20)
-	local h = new("TextLabel")
-	h.BackgroundTransparency = 1
-	h.Size = udim2(1, 0, 0, 18)
-	h.Position = udim2(0, 0, 0, y + 4)
-	h.Font = Enum.Font.Code
-	h.TextSize = 13
-	h.TextColor3 = color3(255, 255, 255)
-	h.Text = fmt("----- %s -----", label)
-	h.Parent = self._root
-	return self
-end
-
-function Console:Rows(defs: {RowDef})
-	for _, def in ipairs(defs) do
-		local y = self:_advance(20)
-		local btn = new("TextButton")
-		btn.AutoButtonColor = false
-		btn.BackgroundTransparency = 1
-		btn.Size = udim2(1, -20, 0, 18)
-		btn.Position = udim2(0, 12, 0, y + 6)
-		btn.Font = Enum.Font.Code
-		btn.TextSize = 13
-		btn.TextXAlignment = Enum.TextXAlignment.Left
-		btn.TextColor3 = color3(230, 230, 230)
-		btn.Text = def.Label
-		btn.Parent = self._root
-
-		insert(self._conns, btn.MouseEnter:Connect(function()
-			btn.TextColor3 = color3(140, 200, 255)
-		end))
-		insert(self._conns, btn.MouseLeave:Connect(function()
-			btn.TextColor3 = color3(230, 230, 230)
-		end))
-
-		if def.OnFire then
-			local fire = def.OnFire
-			local busy = false
-			insert(self._conns, btn.MouseButton1Click:Connect(function()
-				if busy then return end
-				busy = true
-
-				local dots = 0
-				local anim = task.spawn(function()
-					while busy do
-						dots = (dots % 3) + 1
-						btn.Text = "Loading" .. string.rep(".", dots)
-						task.wait(0.35)
-					end
-				end)
-
-				local started = os.clock()
-				local ok, err = pcall(fire)
-
-				local elapsed = os.clock() - started
-				if elapsed < 0.6 then
-					task.wait(0.6 - elapsed)
-				end
-
-				busy = false
-				task.cancel(anim)
-				btn.Text = def.Label
-
-				if not ok then
-					warn(fmt("[%s] handler failed: %s", def.Label, tostring(err)))
-				end
-			end))
+local errorCodes = {}
+do
+	local getter = game.HttpGet or game.HttpGetAsync
+	if getter then
+		local ok2, src = pcall(getter, game, "https://raw.githubusercontent.com/gravloper/estools/refs/heads/main/errors.json")
+		if ok2 and src then
+			local ok3, decoded = pcall(function() return Http:JSONDecode(src) end)
+			if ok3 and decoded then
+				errorCodes = decoded
+			end
 		end
 	end
-	return self
 end
 
-function Console:InfoRows(pairs_: {[string]: string})
-	for k, v in pairs(pairs_) do
-		local y = self:_advance(16)
-		local lbl = new("TextLabel")
-		lbl.BackgroundTransparency = 1
-		lbl.Size = udim2(1, -20, 0, 16)
-		lbl.Position = udim2(0, 12, 0, y + 6)
-		lbl.Font = Enum.Font.Code
-		lbl.TextSize = 12
-		lbl.TextXAlignment = Enum.TextXAlignment.Left
-		lbl.TextColor3 = color3(200, 200, 200)
-		lbl.Text = fmt("%-10s: %s", k, v)
-		lbl.Parent = self._root
-	end
-	return self
-end
+local errGui = Instance.new("ScreenGui")
+errGui.Name = "dvhub_errors"
+errGui.ResetOnSpawn = false
+errGui.IgnoreGuiInset = true
+errGui.Parent = parent
 
-function Console:Destroy()
-	for _, c in ipairs(self._conns) do
-		c:Disconnect()
-	end
-	self._gui:Destroy()
-end
+local function notify(code)
+	local msg = errorCodes[tostring(code)] or "Unknown error"
 
-local function exec(url: string)
-	local getter = (game :: any).HttpGet or (game :: any).HttpGetAsync
-	assert(getter, "no http primitive exposed on game")
+	local toast = Instance.new("Frame")
+	toast.Size = UDim2.new(0, 260, 0, 40)
+	toast.Position = UDim2.new(0.5, -130, 0, -10)
+	toast.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+	toast.BackgroundTransparency = 1
+	toast.BorderSizePixel = 0
+	toast.ZIndex = 50
+	toast.Parent = errGui
 
-	local ok, src = pcall(getter, game, url)
-	if not ok or not src then
-		warn("fetch failed -> " .. url)
-		return
-	end
+	local tstroke = Instance.new("UIStroke")
+	tstroke.Color = Color3.fromRGB(255, 90, 90)
+	tstroke.Transparency = 1
+	tstroke.Thickness = 1
+	tstroke.Parent = toast
 
-	local loader = (loadstring or load) :: (string) -> ((...any) -> ...any)?
-	local fn, cerr = loader(src)
-	if not fn then
-		warn("compile failed -> " .. tostring(cerr))
-		return
-	end
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, -16, 1, 0)
+	label.Position = UDim2.new(0, 8, 0, 0)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.Code
+	label.TextSize = 13
+	label.TextColor3 = Color3.fromRGB(255, 255, 255)
+	label.TextWrapped = true
+	label.TextTransparency = 1
+	label.Text = "Code " .. tostring(code) .. " : " .. msg
+	label.Parent = toast
 
-	fn()
-end
+	local sound = Instance.new("Sound")
+	sound.SoundId = "rbxassetid://139746569667955"
+	sound.Volume = 0.6
+	sound.Parent = toast
+	sound:Play()
 
-local hub = Console.new("dvhub")
+	local TweenService = game:GetService("TweenService")
+	local fadeIn = TweenService:Create(toast, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+		Position = UDim2.new(0.5, -130, 0, 20),
+		BackgroundTransparency = 0.35,
+	})
+	local strokeIn = TweenService:Create(tstroke, TweenInfo.new(0.25), {Transparency = 0.7})
+	local textIn = TweenService:Create(label, TweenInfo.new(0.25), {TextTransparency = 0})
 
-hub:Section("Tools"):Rows({
-	{
-		Label = "Execute Dex++",
-		OnFire = function()
-			exec("https://github.com/AZYsGithub/DexPlusPlus/releases/download/stable-3.0/out.lua")
-		end,
-	},
-	{
-		Label = "Execute Nameless Admin",
-		OnFire = function()
-			exec("https://raw.githubusercontent.com/ltseverydayyou/Nameless-Admin/main/NA%20testing.lua")
-		end,
-	},
-	{
-		Label = "Execute Cobalt Spy",
-		OnFire = function()
-			exec("https://github.com/notpoiu/cobalt/releases/latest/download/Cobalt.luau")
-		end,
-	},
-	{
-		Label = "Execute Simplespy",
-		OnFire = function()
-			exec("https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua")
-		end,
-	},
-})
+	fadeIn:Play()
+	strokeIn:Play()
+	textIn:Play()
 
-hub:Section("Version"):InfoRows({
-	Build = "v0.0.5 beta",
-})
-
-do
-	local closeBtn = new("TextButton")
-	closeBtn.AutoButtonColor = false
-	closeBtn.BackgroundTransparency = 1
-	closeBtn.Size = udim2(0, 90, 0, 16)
-	closeBtn.Position = udim2(1, -98, 1, -22)
-	closeBtn.Font = Enum.Font.Code
-	closeBtn.TextSize = 12
-	closeBtn.TextXAlignment = Enum.TextXAlignment.Right
-	closeBtn.TextColor3 = color3(230, 230, 230)
-	closeBtn.Text = "Remove UI"
-	closeBtn.Parent = hub._root
-
-	closeBtn.MouseEnter:Connect(function()
-		closeBtn.TextColor3 = color3(255, 90, 90)
-	end)
-	closeBtn.MouseLeave:Connect(function()
-		closeBtn.TextColor3 = color3(230, 230, 230)
-	end)
-	closeBtn.MouseButton1Click:Connect(function()
-		hub:Destroy()
+	task.delay(3, function()
+		local fadeOut = TweenService:Create(toast, TweenInfo.new(0.3), {
+			Position = UDim2.new(0.5, -130, 0, -10),
+			BackgroundTransparency = 1,
+		})
+		local strokeOut = TweenService:Create(tstroke, TweenInfo.new(0.3), {Transparency = 1})
+		local textOut = TweenService:Create(label, TweenInfo.new(0.3), {TextTransparency = 1})
+		fadeOut:Play()
+		strokeOut:Play()
+		textOut:Play()
+		fadeOut.Completed:Wait()
+		toast:Destroy()
 	end)
 end
 
-return hub
+local screen = Instance.new("ScreenGui")
+screen.Name = "dvhub_loader"
+screen.ResetOnSpawn = false
+screen.IgnoreGuiInset = true
+screen.Parent = parent
+
+local box = Instance.new("Frame")
+box.Size = UDim2.new(0, 150, 0, 40)
+box.Position = UDim2.new(0.5, -75, 0.5, -20)
+box.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+box.BackgroundTransparency = 0.35
+box.BorderSizePixel = 0
+box.Parent = screen
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(255, 255, 255)
+stroke.Transparency = 0.85
+stroke.Thickness = 1
+stroke.Parent = box
+
+local label = Instance.new("TextLabel")
+label.Size = UDim2.new(1, 0, 1, 0)
+label.BackgroundTransparency = 1
+label.Font = Enum.Font.Code
+label.TextSize = 13
+label.TextColor3 = Color3.fromRGB(230, 230, 230)
+label.Text = "dvhub loading."
+label.Parent = box
+
+local alive = true
+task.spawn(function()
+	local dots = 0
+	while alive do
+		dots = (dots % 3) + 1
+		label.Text = "dvhub loading" .. string.rep(".", dots)
+		task.wait(0.35)
+	end
+end)
+
+local function fetch(url)
+	local getter = game.HttpGet or game.HttpGetAsync
+	if not getter then return nil end
+	local ok2, src = pcall(getter, game, url)
+	if not ok2 then return nil end
+	return src
+end
+
+local placeId = tostring(game.PlaceId)
+local target = supported[placeId]
+
+local src
+if target then
+	src = fetch(base .. target)
+else
+	src = fetch(base .. "Universal/dvhub.luau")
+end
+
+alive = false
+screen:Destroy()
+
+if src then
+	local loader = loadstring or load
+	if loader then
+		local fn, err = loader(src)
+		if fn then
+			local ranOk, runErr = pcall(fn)
+			if not ranOk then
+				notify(751)
+				warn("runtime failed: " .. tostring(runErr))
+			end
+		else
+			notify(755)
+			warn("dvhub compile failed: " .. tostring(err))
+		end
+	else
+		notify(754)
+	end
+else
+	notify(752)
+end
