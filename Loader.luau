@@ -149,6 +149,9 @@ end
 local placeId = tostring(game.PlaceId)
 local target = supported[placeId]
 
+local token = tostring(math.random(100000, 999999)) .. tostring(os.clock()):gsub("%.", "")
+_G.dvhub_token = token
+
 local src
 if target then
 	src = fetch(base .. target)
@@ -170,12 +173,15 @@ if src then
 				warn("runtime failed: " .. tostring(runErr))
 			end
 		else
+			_G.dvhub_token = nil
 			notify(755)
 			warn("dvhub compile failed: " .. tostring(err))
 		end
 	else
+		_G.dvhub_token = nil
 		notify(754)
 	end
 else
+	_G.dvhub_token = nil
 	notify(752)
 end
