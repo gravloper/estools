@@ -1,0 +1,7 @@
+{
+  "751": "Invalid loadstring or nothing to fetch",
+  "1000": "Fetch failed, check connection or repo path",
+  "-3": "No HttpGet function available in this environment",
+  "5921": "No loadstring/load available in this environment",
+  "-9595959": "Script failed to compile"
+}
