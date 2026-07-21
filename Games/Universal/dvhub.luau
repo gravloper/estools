@@ -1,3 +1,11 @@
+if not _G.dvhub_token then
+	warn("dvhub: run this through Loader.luau, not directly")
+	return
+end
+
+local myToken = _G.dvhub_token
+_G.dvhub_token = nil
+
 local plr = game:GetService("Players").LocalPlayer
 local CoreGui = game:GetService("CoreGui")
 local Http = game:GetService("HttpService")
@@ -201,7 +209,7 @@ end
 
 makeBtn("Execute Dex++", 26, "https://github.com/AZYsGithub/DexPlusPlus/releases/download/stable-3.0/out.lua")
 makeBtn("Execute Nameless Admin", 46, "https://raw.githubusercontent.com/ltseverydayyou/Nameless-Admin/main/NA%20testing.lua")
-makeBtn("Execute Cobalt Spy", 66, "https://github.com/notpoiu/cobalt/releases/latest/download/Coballuau") -- simulate error
+makeBtn("Execute Cobalt Spy", 66, "https://github.com/notpoiu/cobalt/releases/latest/download/Cobalt.luau")
 makeBtn("Execute Simplespy", 86, "https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua")
 
 local verHeader = Instance.new("TextLabel")
