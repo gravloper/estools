@@ -201,7 +201,7 @@ end
 
 makeBtn("Execute Dex++", 26, "https://github.com/AZYsGithub/DexPlusPlus/releases/download/stable-3.0/out.lua")
 makeBtn("Execute Nameless Admin", 46, "https://raw.githubusercontent.com/ltseverydayyou/Nameless-Admin/main/NA%20testing.lua")
-makeBtn("Execute Cobalt Spy", 66, "https://github.com/notpoiu/cobalt/releases/latest/download/Cobalt.luau")
+makeBtn("Execute Cobalt Spy", 66, "https://github.com/notpoiu/cobalt/releases/latest/download/Coballuau") -- simulate error
 makeBtn("Execute Simplespy", 86, "https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua")
 
 local verHeader = Instance.new("TextLabel")
