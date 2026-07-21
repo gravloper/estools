@@ -1,5 +1,5 @@
 if not _G.dvhub_token then
-	warn("dvhub: run this through Loader.luau, not directly")
+	warn("run this through Loader.luau, not directly")
 	return
 end
 
@@ -24,7 +24,6 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = parent
 
--- error code lookup, pulled from github once and cached
 local errorCodes = {}
 do
 	local getter = game.HttpGet or game.HttpGetAsync
@@ -39,7 +38,6 @@ do
 	end
 end
 
--- error toast, same look as the main panel, slides/fades in top center
 local function notify(code)
 	local msg = errorCodes[tostring(code)] or "Unknown error"
 
@@ -126,28 +124,28 @@ title.BackgroundTransparency = 1
 title.Font = Enum.Font.Code
 title.TextSize = 13
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.Text = "----- Tools -----"
+title.Text = "Scripts"
 title.Parent = main
 
 local function run(url)
 	local getter = game.HttpGet or game.HttpGetAsync
 	if not getter then
-		notify(753)
+		notify(-3)
 		return
 	end
 	local ok2, src = pcall(getter, game, url)
 	if not ok2 or not src then
-		notify(752)
+		notify(1000)
 		return
 	end
 	local loader = loadstring or load
 	if not loader then
-		notify(754)
+		notify(5921)
 		return
 	end
 	local fn, err = loader(src)
 	if not fn then
-		notify(755)
+		notify(-9595959)
 		warn("compile failed: " .. tostring(err))
 		return
 	end
@@ -219,7 +217,7 @@ verHeader.BackgroundTransparency = 1
 verHeader.Font = Enum.Font.Code
 verHeader.TextSize = 13
 verHeader.TextColor3 = Color3.fromRGB(255, 255, 255)
-verHeader.Text = "----- Version -----"
+verHeader.Text = "Version"
 verHeader.Parent = main
 
 local verLabel = Instance.new("TextLabel")
@@ -230,7 +228,7 @@ verLabel.Font = Enum.Font.Code
 verLabel.TextSize = 12
 verLabel.TextXAlignment = Enum.TextXAlignment.Left
 verLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-verLabel.Text = "Build     : v0.0.5 beta"
+verLabel.Text = "Build     : v0.0.6 bleedingedge"
 verLabel.Parent = main
 
 local closeBtn = Instance.new("TextButton")
@@ -241,7 +239,7 @@ closeBtn.Font = Enum.Font.Code
 closeBtn.TextSize = 12
 closeBtn.TextXAlignment = Enum.TextXAlignment.Right
 closeBtn.TextColor3 = Color3.fromRGB(230, 230, 230)
-closeBtn.Text = "Remove UI"
+closeBtn.Text = "Destroy menu"
 closeBtn.AutoButtonColor = false
 closeBtn.Parent = main
 
