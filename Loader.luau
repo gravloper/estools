@@ -1,7 +1,7 @@
 local base = "https://raw.githubusercontent.com/gravloper/estools/refs/heads/main/Games/"
 
 local supported = {
-	-- [placeid] = "Supported/whatever.luau"
+	-- nothing supported /whatever
 }
 
 local plr = game:GetService("Players").LocalPlayer
@@ -140,10 +140,10 @@ end)
 
 local function fetch(url)
 	local getter = game.HttpGet or game.HttpGetAsync
-	if not getter then return nil end
+	if not getter then return nil, -3 end
 	local ok2, src = pcall(getter, game, url)
-	if not ok2 then return nil end
-	return src
+	if not ok2 or not src then return nil, 1000 end
+	return src, nil
 end
 
 local placeId = tostring(game.PlaceId)
@@ -152,12 +152,8 @@ local target = supported[placeId]
 local token = tostring(math.random(100000, 999999)) .. tostring(os.clock()):gsub("%.", "")
 _G.dvhub_token = token
 
-local src
-if target then
-	src = fetch(base .. target)
-else
-	src = fetch(base .. "Universal/dvhub.luau")
-end
+local url = target and (base .. target) or (base .. "Universal/dvhub.luau")
+local src, errCode = fetch(url)
 
 alive = false
 screen:Destroy()
@@ -174,14 +170,14 @@ if src then
 			end
 		else
 			_G.dvhub_token = nil
-			notify(755)
+			notify(-9595959)
 			warn("dvhub compile failed: " .. tostring(err))
 		end
 	else
 		_G.dvhub_token = nil
-		notify(754)
+		notify(5921)
 	end
 else
 	_G.dvhub_token = nil
-	notify(752)
+	notify(errCode or 1000)
 end
