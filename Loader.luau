@@ -1,25 +1,109 @@
 local base = "https://raw.githubusercontent.com/gravloper/estools/refs/heads/main/Games/"
 
 local supported = {
-	-- no support right now, im more focused on dvhub
+	-- [placeid] = "Supported/whatever.luau"
 }
 
 local plr = game:GetService("Players").LocalPlayer
 local CoreGui = game:GetService("CoreGui")
+local Http = game:GetService("HttpService")
 
-local function getParent()
-	local ok, res = pcall(function() return CoreGui end)
-	if ok and res then
-		return res
+local parent
+local ok, res = pcall(function() return CoreGui end)
+if ok and res then
+	parent = res
+else
+	parent = plr:WaitForChild("PlayerGui")
+end
+
+local errorCodes = {}
+do
+	local getter = game.HttpGet or game.HttpGetAsync
+	if getter then
+		local ok2, src = pcall(getter, game, "https://raw.githubusercontent.com/gravloper/estools/refs/heads/main/errors.json")
+		if ok2 and src then
+			local ok3, decoded = pcall(function() return Http:JSONDecode(src) end)
+			if ok3 and decoded then
+				errorCodes = decoded
+			end
+		end
 	end
-	return plr:WaitForChild("PlayerGui")
+end
+
+local errGui = Instance.new("ScreenGui")
+errGui.Name = "dvhub_errors"
+errGui.ResetOnSpawn = false
+errGui.IgnoreGuiInset = true
+errGui.Parent = parent
+
+local function notify(code)
+	local msg = errorCodes[tostring(code)] or "Unknown error"
+
+	local toast = Instance.new("Frame")
+	toast.Size = UDim2.new(0, 260, 0, 40)
+	toast.Position = UDim2.new(0.5, -130, 0, -10)
+	toast.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+	toast.BackgroundTransparency = 1
+	toast.BorderSizePixel = 0
+	toast.ZIndex = 50
+	toast.Parent = errGui
+
+	local tstroke = Instance.new("UIStroke")
+	tstroke.Color = Color3.fromRGB(255, 90, 90)
+	tstroke.Transparency = 1
+	tstroke.Thickness = 1
+	tstroke.Parent = toast
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, -16, 1, 0)
+	label.Position = UDim2.new(0, 8, 0, 0)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.Code
+	label.TextSize = 13
+	label.TextColor3 = Color3.fromRGB(255, 255, 255)
+	label.TextWrapped = true
+	label.TextTransparency = 1
+	label.Text = "Code " .. tostring(code) .. " : " .. msg
+	label.Parent = toast
+
+	local sound = Instance.new("Sound")
+	sound.SoundId = "rbxassetid://139746569667955"
+	sound.Volume = 0.6
+	sound.Parent = toast
+	sound:Play()
+
+	local TweenService = game:GetService("TweenService")
+	local fadeIn = TweenService:Create(toast, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+		Position = UDim2.new(0.5, -130, 0, 20),
+		BackgroundTransparency = 0.35,
+	})
+	local strokeIn = TweenService:Create(tstroke, TweenInfo.new(0.25), {Transparency = 0.7})
+	local textIn = TweenService:Create(label, TweenInfo.new(0.25), {TextTransparency = 0})
+
+	fadeIn:Play()
+	strokeIn:Play()
+	textIn:Play()
+
+	task.delay(3, function()
+		local fadeOut = TweenService:Create(toast, TweenInfo.new(0.3), {
+			Position = UDim2.new(0.5, -130, 0, -10),
+			BackgroundTransparency = 1,
+		})
+		local strokeOut = TweenService:Create(tstroke, TweenInfo.new(0.3), {Transparency = 1})
+		local textOut = TweenService:Create(label, TweenInfo.new(0.3), {TextTransparency = 1})
+		fadeOut:Play()
+		strokeOut:Play()
+		textOut:Play()
+		fadeOut.Completed:Wait()
+		toast:Destroy()
+	end)
 end
 
 local screen = Instance.new("ScreenGui")
 screen.Name = "dvhub_loader"
 screen.ResetOnSpawn = false
 screen.IgnoreGuiInset = true
-screen.Parent = getParent()
+screen.Parent = parent
 
 local box = Instance.new("Frame")
 box.Size = UDim2.new(0, 150, 0, 40)
@@ -57,20 +141,9 @@ end)
 local function fetch(url)
 	local getter = game.HttpGet or game.HttpGetAsync
 	if not getter then return nil end
-	local ok, src = pcall(getter, game, url)
-	if not ok then return nil end
+	local ok2, src = pcall(getter, game, url)
+	if not ok2 then return nil end
 	return src
-end
-
-local function run(src)
-	local loader = loadstring or load
-	if not loader then return end
-	local fn, err = loader(src)
-	if not fn then
-		warn("dvhub compile failed: " .. tostring(err))
-		return
-	end
-	fn()
 end
 
 local placeId = tostring(game.PlaceId)
@@ -83,14 +156,26 @@ else
 	src = fetch(base .. "Universal/dvhub.luau")
 end
 
--- keep the loading box up a bit so it doesnt just uhh you know maybe i didd it for fun bro r ugsu
-task.wait(0.5)
-
 alive = false
 screen:Destroy()
 
 if src then
-	run(src)
+	local loader = loadstring or load
+	if loader then
+		local fn, err = loader(src)
+		if fn then
+			local ranOk, runErr = pcall(fn)
+			if not ranOk then
+				notify(751)
+				warn("runtime failed: " .. tostring(runErr))
+			end
+		else
+			notify(755)
+			warn("dvhub compile failed: " .. tostring(err))
+		end
+	else
+		notify(754)
+	end
 else
-	warn("couldnt fetch script")
+	notify(752)
 end
